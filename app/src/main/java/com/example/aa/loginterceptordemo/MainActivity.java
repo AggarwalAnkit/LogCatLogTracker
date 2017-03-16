@@ -16,14 +16,7 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        /*try {
-            Logger.getGlobal().addHandler(new SocketHandler("10.0.2.2", 6969));
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-
-        Log.d("Main Activity", "Debug Log");*/
-        //TODO uncomment this for testing
+        //TODO uncomment this for using java.util.Logger
         // new LogHandlerTask().execute();
 
         startService(new Intent(this, LoggingService.class));
