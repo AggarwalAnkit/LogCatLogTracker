@@ -20,6 +20,8 @@ public class LoggingThread extends Thread {
     private String mProcessId;
     private boolean mFinish;
     private static final String TAG = LoggingThread.class.getSimpleName();
+    private static final String HOST = "http://10.0.2.2";
+    private static final int PORT = 3000;
 
     public LoggingThread(String name, int processId) {
         super("[" + name + "]");
@@ -32,7 +34,7 @@ public class LoggingThread extends Thread {
 
         Socket socket;
         try {
-            socket = IO.socket("http://10.0.2.2:3000");
+            socket = IO.socket(HOST + ":" + PORT);
             socket.connect();
         } catch (URISyntaxException e) {
             e.printStackTrace();
