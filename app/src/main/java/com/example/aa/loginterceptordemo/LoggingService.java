@@ -2,7 +2,6 @@ package com.example.aa.loginterceptordemo;
 
 import android.app.Service;
 import android.content.Intent;
-import android.os.AsyncTask;
 import android.os.Handler;
 import android.os.HandlerThread;
 import android.os.IBinder;
@@ -15,11 +14,11 @@ import android.util.Log;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.lang.ref.WeakReference;
-import java.util.logging.Level;
-import java.util.logging.Logger;
-import java.util.logging.SimpleFormatter;
-import java.util.logging.SocketHandler;
+import java.net.URISyntaxException;
+
+import io.socket.client.Ack;
+import io.socket.client.IO;
+import io.socket.client.Socket;
 
 /**
  * Created by aa on 15/03/17.
@@ -31,11 +30,11 @@ public class LoggingService extends Service {
     private volatile ServiceHandler mServiceHandler;
     private String mName;
     private boolean mRedelivery;
-    private Boolean mIsHandlerAdded = false;
+    private boolean mIsSocketConnected = false;
 
-    private static final Logger LOGGER = Logger.getGlobal();
     private static final String processId = Integer.toString(android.os.Process.myPid());
     public static final String TAG = LoggingService.class.getSimpleName();
+    private Socket mSocket;
 
     private final class ServiceHandler extends Handler {
         public ServiceHandler(Looper looper) {
@@ -96,8 +95,6 @@ public class LoggingService extends Service {
 
         mServiceLooper = thread.getLooper();
         mServiceHandler = new ServiceHandler(mServiceLooper);
-        LOGGER.setLevel(Level.ALL);
-        new AddLogHandlerTask(this).execute();
     }
 
     /**
@@ -109,6 +106,7 @@ public class LoggingService extends Service {
      */
     @Override
     public int onStartCommand(@Nullable Intent intent, int flags, int startId) {
+        mServiceHandler.sendEmptyMessage(0);
         return mRedelivery ? START_REDELIVER_INTENT : START_NOT_STICKY;
     }
 
@@ -147,21 +145,17 @@ public class LoggingService extends Service {
      */
     @WorkerThread
     private void onHandleIntent(@Nullable Intent intent) {
-
-        synchronized (this) {
-            while (mIsHandlerAdded != null && !mIsHandlerAdded) {
-                Log.d(TAG, "Came here.");
-                try {
-                    wait();
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                    Log.d(TAG, "wait interrupted.");
-                }
-            }
+        try {
+            mSocket = IO.socket("http://10.0.2.2:3000");
+            mSocket.connect();
+        } catch (URISyntaxException e) {
+            e.printStackTrace();
+            stopSelf();
+            return;
         }
 
-        if (mIsHandlerAdded == null) {
-            return;
+        if(mSocket.connected()) {
+            Log.d(TAG, "MARA LO");
         }
 
         try {
@@ -175,7 +169,8 @@ public class LoggingService extends Service {
 
             while ((line = bufferedReader.readLine()) != null) {
                 if (line.contains(processId)) {
-                    LOGGER.log(Level.ALL, line);
+                    //TODO send to mSocket
+                    mSocket.emit("new message", line);
                 }
             }
         } catch (IOException ex) {
@@ -183,53 +178,14 @@ public class LoggingService extends Service {
         }
     }
 
-    public void setIsHandlerAdded(Boolean isHandlerAdded) {
-        mIsHandlerAdded = isHandlerAdded;
-    }
-
-    public void startLogging() {
-        mServiceHandler.sendEmptyMessage(0);
-    }
-
-    public static class AddLogHandlerTask extends AsyncTask<Void, Void, SocketHandler> {
-
-        private WeakReference<LoggingService> mLoggingServiceWeakReference;
-
-        public AddLogHandlerTask(LoggingService loggingService) {
-            mLoggingServiceWeakReference = new WeakReference<>(loggingService);
+    private void connect() {
+        try {
+            mSocket = IO.socket("http://10.0.2.2:3000");
+        } catch (URISyntaxException e) {
+            e.printStackTrace();
         }
-
-        @Override
-        protected SocketHandler doInBackground(Void... params) {
-            SocketHandler socketHandler = null;
-            try {
-                socketHandler = new SocketHandler("10.0.2.2", 6969);
-                //socketHandler = new SocketHandler("10.0.2.2", 3000);
-                socketHandler.setFormatter(new SimpleFormatter());
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-            return socketHandler;
-        }
-
-        @Override
-        protected void onPostExecute(SocketHandler socketHandler) {
-
-            if (socketHandler != null) {
-                LOGGER.addHandler(socketHandler);
-            }
-
-            if (mLoggingServiceWeakReference != null) {
-                LoggingService loggingService = mLoggingServiceWeakReference.get();
-                if (loggingService != null) {
-                    if (socketHandler != null) {
-                        loggingService.setIsHandlerAdded(true);
-                    } else {
-                        loggingService.setIsHandlerAdded(null);
-                    }
-                    loggingService.startLogging();
-                }
-            }
+        if(mSocket != null) {
+            mSocket.connect();
         }
     }
 }

@@ -1,16 +1,13 @@
 package com.example.aa.loginterceptordemo;
 
 import android.content.Intent;
-import android.os.AsyncTask;
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
 
-import java.io.IOException;
-import java.util.logging.Level;
-import java.util.logging.Logger;
-import java.util.logging.SimpleFormatter;
-import java.util.logging.SocketHandler;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -30,9 +27,17 @@ public class MainActivity extends AppCompatActivity {
         // new LogHandlerTask().execute();
 
         startService(new Intent(this, LoggingService.class));
+
+        ScheduledExecutorService scheduledThreadPool = Executors.newScheduledThreadPool(5);
+        scheduledThreadPool.scheduleAtFixedRate(new Runnable() {
+            @Override
+            public void run() {
+                Log.d(MainActivity.class.getSimpleName(), "I am a debug test log");
+            }
+        }, 10, 10, TimeUnit.SECONDS);
     }
 
-    public static class LogHandlerTask extends AsyncTask<Void, Void, Void> {
+    /*public static class LogHandlerTask extends AsyncTask<Void, Void, Void> {
 
         //private static final Logger LOGGER = Logger.getLogger(MainActivity.class.getName());
         private static final Logger LOGGER = Logger.getGlobal();
@@ -50,9 +55,9 @@ public class MainActivity extends AppCompatActivity {
             }
             LOGGER.log(Level.CONFIG, "TEST");
 
-            /*LogRecord logRec = new LogRecord(Level.INFO, "Log will be recorded");
+            *//*LogRecord logRec = new LogRecord(Level.INFO, "Log will be recorded");
             socketHandler.publish(logRec);
-            LOGGER.info("socket handler info message");*/
+            LOGGER.info("socket handler info message");*//*
 
             return null;
         }
@@ -61,8 +66,8 @@ public class MainActivity extends AppCompatActivity {
         protected void onPostExecute(Void aVoid) {
             super.onPostExecute(aVoid);
             Log.d("Main Activity", "Log Handler Added");
-            /*LOGGER.config("TEST LOG MESSAGE");
-            socketHandler.flush();*/
+            *//*LOGGER.config("TEST LOG MESSAGE");
+            socketHandler.flush();*//*
         }
-    }
+    }*/
 }
